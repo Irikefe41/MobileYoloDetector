@@ -1,6 +1,42 @@
+import 'package:object_detect/object_detect.dart';
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'dart:async'
 
-void main() => runApp(MyApp());
+List<CameraDescription> cameras;
+var labels, colors;
+
+Future<void> main() async {
+  try {
+    cameras = await availableCameras();
+  } on CameraException catch (e) {
+    print('Error: $e.code\nError Message: $e.message');
+  }
+  await _loadModel();
+  runApp(ObjectDetectApp());
+}
+Future<Null> _loadModel() async{
+  try {
+    const platform = const MethodChannel('IrikefeML/yoloAPP');
+
+    var yoloBel = await rootBundle.loadString('assets/yolov2-tiny.meta');
+    var metaData = json.decode(yoloBel);
+    labels = metaData["labels"];
+    colors = metaData["colors"];
+    metaData["blockSize"] = 32;
+    metaData["threshold"] = 0.5;
+    metaData["overlap_threshold"] = 0.7;
+    metaData["max_result"] = 15;
+
+    final String result = await platform.invokeMethod('loadModel',
+        {"modal_path": "assets/yolov2_graph.lite", "meta_data": metaData});
+    print(result);
+  } on PlatformException catch(e){
+    print('Error: $e.code\nError Message: $e.message')
+  }
+}
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
